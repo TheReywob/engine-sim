@@ -2,7 +2,7 @@
 
 HOW TO START THE ENGINE SIMULATOR
 
-1. Open the MAIN folder (engine-sim_build_x_x_x)
+1. Open the MAIN folder (engine-sim-master)
 
 Selecting your engine:
 
