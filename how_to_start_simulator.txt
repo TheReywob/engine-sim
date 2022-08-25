@@ -1,0 +1,23 @@
+//////// Engine Simulator by AngeTheGreat forked by TheReywob ////////
+
+HOW TO START THE ENGINE SIMULATOR
+
+1. Open the MAIN folder (engine-sim_build_x_x_x)
+
+Selecting your engine:
+
+1. Open the 'assets' folder.
+2. Right-click on 'main.mr' and open the file with Notepad.
+3. Notice that each engine has a "node name" (ex. //audi_i5_2_2L).
+4. Scroll to the bottom of the file and replace 'chev_truck_454' with the node name of the engine you want to select.
+5. Make sure to leave () at the end of the node name.
+6. Save and exit the file.
+7. Go back to the MAIN folder.
+
+Starting the simulator:
+
+1. Open the 'bin' folder.
+2. Locate the 'engine-sim-app.exe' file.
+3. Right-click the file and select 'Create shortcut'.
+4. You can now place this shortcut on your desktop for easier use later on.
+5. Now run the shortcut and the simulator will start.

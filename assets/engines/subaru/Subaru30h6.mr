@@ -1,0 +1,393 @@
+import "engine_sim.mr"
+
+units units()
+constants constants()
+impulse_response_library ir_lib()
+// Real EZ30D engine specs:
+// Max power: 242 HP @ 6600 rpm
+// Max torque: 297 Nm (219 lb-ft) @ 4200 rpm
+// Compression ratio: 10.7:1
+// bore: 89.2 mm
+// stroke: 80 mm
+// firing order: 1-6-3-2-5-4
+// cylinders order:
+//    5   6
+//    3   4
+//    1   2
+
+private node wires {
+    output wire1: ignition_wire();
+    output wire2: ignition_wire();
+    output wire3: ignition_wire();
+    output wire4: ignition_wire();
+    output wire5: ignition_wire();
+    output wire6: ignition_wire();
+}
+
+label cycle(2 * 360 * units.deg)
+
+public node Subaru30h6_distributor {
+    input wires;
+    input timing_curve;
+    input rev_limit: 8000 * units.rpm;
+	input limiter_duration: 0.08 * units.sec;
+    alias output __out:
+        ignition_module(timing_curve: timing_curve, rev_limit: rev_limit, limiter_duration: limiter_duration)
+            .connect_wire(wires.wire1, ((120.0*0) / 720.0) * cycle)
+            .connect_wire(wires.wire2, ((120.0*1) / 720.0) * cycle)
+            .connect_wire(wires.wire3, ((120.0*2) / 720.0) * cycle)
+            .connect_wire(wires.wire4, ((120.0*3) / 720.0) * cycle)
+            .connect_wire(wires.wire5, ((120.0*4) / 720.0) * cycle)
+            .connect_wire(wires.wire6, ((120.0*5) / 720.0) * cycle);
+}
+
+private node add_sym_sample {
+    input angle;
+    input lift;
+    input this;
+    alias output __out: this;
+
+    this.add_sample(angle * units.deg, lift * units.thou)
+    this.add_sample(-angle * units.deg, lift * units.thou)
+}
+
+private node add_flow_sample {
+    input lift;
+    input flow;
+    input this;
+    alias output __out: this;
+
+    this.add_sample(lift * units.thou, k_28inH2O(flow))
+}
+
+public node Subaru30h6_engine_head {
+    input intake_camshaft;
+    input exhaust_camshaft;
+    input chamber_volume: 46.0 * units.cc;
+    input intake_runner_volume: 100.0 * units.cc;
+    input intake_runner_cross_section_area: 26.0 * units.cm2;
+    input exhaust_runner_volume: 100.0 * units.cc;
+    input exhaust_runner_cross_section_area: 26.0 * units.cm2;
+
+    input flow_attenuation: 1.0;
+    input lift_scale: 1.0;
+    input flip_display: false;
+    alias output __out: head;
+
+    function intake_flow(50 * units.thou)
+    intake_flow
+        .add_flow_sample(0 * lift_scale, 0 * flow_attenuation)
+        .add_flow_sample(50 * lift_scale, 25 * flow_attenuation)
+        .add_flow_sample(100 * lift_scale, 75 * flow_attenuation)
+        .add_flow_sample(150 * lift_scale, 100 * flow_attenuation)
+        .add_flow_sample(200 * lift_scale, 130 * flow_attenuation)
+        .add_flow_sample(250 * lift_scale, 180 * flow_attenuation)
+        .add_flow_sample(300 * lift_scale, 190 * flow_attenuation)
+        .add_flow_sample(350 * lift_scale, 220 * flow_attenuation)
+        .add_flow_sample(400 * lift_scale, 240 * flow_attenuation)
+        .add_flow_sample(450 * lift_scale, 250 * flow_attenuation)
+        .add_flow_sample(500 * lift_scale, 260 * flow_attenuation)
+        .add_flow_sample(550 * lift_scale, 260 * flow_attenuation)
+        .add_flow_sample(600 * lift_scale, 260 * flow_attenuation)
+        .add_flow_sample(650 * lift_scale, 255 * flow_attenuation)
+        .add_flow_sample(700 * lift_scale, 250 * flow_attenuation)
+
+    function exhaust_flow(50 * units.thou)
+    exhaust_flow
+        .add_flow_sample(0 * lift_scale, 0 * flow_attenuation)
+        .add_flow_sample(50 * lift_scale, 25 * flow_attenuation)
+        .add_flow_sample(100 * lift_scale, 50 * flow_attenuation)
+        .add_flow_sample(150 * lift_scale, 75 * flow_attenuation)
+        .add_flow_sample(200 * lift_scale, 100 * flow_attenuation)
+        .add_flow_sample(250 * lift_scale, 125 * flow_attenuation)
+        .add_flow_sample(300 * lift_scale, 160 * flow_attenuation)
+        .add_flow_sample(350 * lift_scale, 175 * flow_attenuation)
+        .add_flow_sample(400 * lift_scale, 180 * flow_attenuation)
+        .add_flow_sample(450 * lift_scale, 190 * flow_attenuation)
+        .add_flow_sample(500 * lift_scale, 200 * flow_attenuation)
+        .add_flow_sample(550 * lift_scale, 205 * flow_attenuation)
+        .add_flow_sample(600 * lift_scale, 210 * flow_attenuation)
+        .add_flow_sample(650 * lift_scale, 210 * flow_attenuation)
+        .add_flow_sample(700 * lift_scale, 210 * flow_attenuation)
+
+    cylinder_head head(
+        chamber_volume: chamber_volume,
+        intake_runner_volume: intake_runner_volume,
+        intake_runner_cross_section_area: intake_runner_cross_section_area,
+        exhaust_runner_volume: exhaust_runner_volume,
+        exhaust_runner_cross_section_area: exhaust_runner_cross_section_area,
+        intake_port_flow: intake_flow,
+        exhaust_port_flow: exhaust_flow,
+        intake_camshaft: intake_camshaft,
+        exhaust_camshaft: exhaust_camshaft,
+        flip_display: flip_display
+    )
+}
+
+public node Subaru30h6_lobe_profile_int {
+    alias output __out:
+        harmonic_cam_lobe(
+            duration_at_50_thou: 220 * units.deg,
+            gamma: 0.8,
+            lift: 11 * units.mm,
+            steps: 100
+        );
+}
+
+public node Subaru30h6_lobe_profile_exh {
+    alias output __out:
+        harmonic_cam_lobe(
+            duration_at_50_thou: 200 * units.deg,
+            gamma: 0.8,
+            lift: 10 * units.mm,
+            steps: 100
+        );
+}
+
+public node Subaru30h6_camshaft_builder {
+    input lobe_profile: Subaru30h6_lobe_profile_int();
+	input ex_lobe_profile: Subaru30h6_lobe_profile_exh();
+    input intake_lobe_profile: lobe_profile;
+    input exhaust_lobe_profile: ex_lobe_profile;
+    input lobe_separation: 116.0 * units.deg;
+    input intake_lobe_center: lobe_separation;
+    input exhaust_lobe_center: lobe_separation;
+    input advance: 0.0 * units.deg;
+    input base_radius: 13 * units.mm;
+
+    output intake_cam_0: _intake_cam_0;
+    output intake_cam_1: _intake_cam_1;
+    output exhaust_cam_0: _exhaust_cam_0;
+    output exhaust_cam_1: _exhaust_cam_1;
+
+    camshaft_parameters params(
+        advance: advance,
+        base_radius: base_radius
+    )
+
+    camshaft _intake_cam_0(params, lobe_profile: intake_lobe_profile)
+    camshaft _intake_cam_1(params, lobe_profile: intake_lobe_profile)
+    camshaft _exhaust_cam_0(params, lobe_profile: exhaust_lobe_profile)
+    camshaft _exhaust_cam_1(params, lobe_profile: exhaust_lobe_profile)
+
+    label rot120(120 * units.deg)
+    label rot180(180 * units.deg)
+    label rot360(360 * units.deg)
+
+    _intake_cam_0  // left side
+        .add_lobe(rot360 + intake_lobe_center)
+        .add_lobe(rot360 + intake_lobe_center + 2 * rot120)
+        .add_lobe(rot360 + intake_lobe_center + 4 * rot120)
+    _intake_cam_1 // right side
+        .add_lobe(rot360 + intake_lobe_center + 3 * rot120)
+        .add_lobe(rot360 + intake_lobe_center + 5 * rot120)
+        .add_lobe(rot360 + intake_lobe_center + 1 * rot120)
+        
+    _exhaust_cam_0  // left side
+        .add_lobe(rot360 - exhaust_lobe_center)
+        .add_lobe(rot360 - exhaust_lobe_center + 2 * rot120)
+        .add_lobe(rot360 - exhaust_lobe_center + 4 * rot120)
+    _exhaust_cam_1 // right side
+        .add_lobe(rot360 - exhaust_lobe_center + 3 * rot120)
+        .add_lobe(rot360 - exhaust_lobe_center + 5 * rot120)
+        .add_lobe(rot360 - exhaust_lobe_center + 1 * rot120)
+}
+
+public node Subaru30h6 {
+    alias output __out: engine;
+
+    engine engine(
+        name: "Subaru 3.0 H6",
+        starter_torque: 150 * units.Nm,
+        starter_speed: 500 * units.rpm,
+        redline: 7000 * units.rpm,
+        fuel: fuel(
+            max_turbulence_effect: 1.0,
+            burning_efficiency_randomness: 0.2,
+            max_burning_efficiency: 0.85)
+	)
+    
+    wires wires()
+
+    crankshaft c0(
+        throw: 80.0 * units.mm / 2,
+        flywheel_mass: 5 * units.kg,
+        mass: 10 * units.kg,
+        friction_torque: 10.0 * units.Nm,
+        moment_of_inertia: 0.22986844776863666 * 0.7,
+        position_x: 0.0,
+        position_y: 0.0,
+        tdc: 0 * units.deg
+    )
+
+    rod_journal rj1(angle: 180 * units.deg)  // angles in counter clock wise
+    rod_journal rj2(angle: 0 * units.deg)  // 0 deg. is at the right quadrant
+    rod_journal rj3(angle: 60 * units.deg)
+    rod_journal rj4(angle: 240 * units.deg)
+    rod_journal rj5(angle: 300 * units.deg)
+    rod_journal rj6(angle: 120 * units.deg)
+
+    c0
+        .add_rod_journal(rj1)
+        .add_rod_journal(rj2)
+        .add_rod_journal(rj3)
+        .add_rod_journal(rj4)
+        .add_rod_journal(rj5)
+        .add_rod_journal(rj6)
+
+    piston_parameters piston_params(
+        mass: 320 * units.g,
+        compression_height: 30.0 * units.mm,
+        wrist_pin_position: 0.0,
+        displacement: 0.0
+    )
+
+    connecting_rod_parameters cr_params(
+        mass: 200.0 * units.g,
+        moment_of_inertia: 0.0015884918028487504,
+        center_of_mass: 0.0,
+        length: 131.5 * units.mm
+    )
+
+    cylinder_bank_parameters bank_params(
+        bore: 89.2 * units.mm,
+        deck_height: (131.5 + 80.0 / 2 + 30) * units.mm
+    )
+
+    intake intake1(
+        plenum_volume: 6.0 * units.L,
+        plenum_cross_section_area: 100.0 * units.cm2,
+        intake_flow_rate: k_carb(500.0),
+        idle_flow_rate: k_carb(0.0),
+        idle_throttle_plate_position: 0.9965,
+        throttle_gamma: 1.0
+    )
+
+    exhaust_system_parameters es_params1(
+        outlet_flow_rate: k_carb(1000.0),
+        primary_tube_length: 350.0 * units.mm,
+        primary_flow_rate: k_carb(500.0),
+        velocity_decay: 1.0,
+        volume: 20.0 * units.L
+    )
+
+    exhaust_system exhaust1(
+        es_params1,
+        audio_volume: 0.4,
+        impulse_response: ir_lib.default_0
+    )
+    exhaust_system_parameters es_params2(
+        outlet_flow_rate: k_carb(1000.0),
+        primary_tube_length: 350.0 * units.mm,
+        primary_flow_rate: k_carb(500.0),
+        velocity_decay: 1.0,
+        volume: 20.0 * units.L
+    )
+
+    exhaust_system exhaust2(
+        es_params2,
+        audio_volume: 0.3,
+        impulse_response: ir_lib.default_0
+    )
+
+    cylinder_bank b0(bank_params, angle: (90) * units.deg)  // left side
+    b0
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj1,
+            intake: intake1,
+            exhaust_system: exhaust1,
+            ignition_wire: wires.wire1
+        )
+
+		.add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj3,
+            intake: intake1,
+            exhaust_system: exhaust1,
+            ignition_wire: wires.wire3
+        )
+
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj5,
+            intake: intake1,
+            exhaust_system: exhaust1,
+            ignition_wire: wires.wire5
+        )
+
+    cylinder_bank b1(bank_params, angle: -(90) * units.deg)  // right side
+    b1
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj2,
+            intake: intake1,
+            exhaust_system: exhaust2,
+            ignition_wire: wires.wire4
+        )
+
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj4,
+            intake: intake1,
+            exhaust_system: exhaust2,
+            ignition_wire: wires.wire6
+        )
+        
+        .add_cylinder(
+            piston: piston(piston_params, blowby: k_28inH2O(0.1)),
+            connecting_rod: connecting_rod(cr_params),
+            rod_journal: rj6,
+            intake: intake1,
+            exhaust_system: exhaust2,
+            ignition_wire: wires.wire2
+        )
+
+    engine
+        .add_cylinder_bank(b0)
+        .add_cylinder_bank(b1)
+
+    engine.add_crankshaft(c0)
+	
+	Subaru30h6_camshaft_builder camshaft()
+
+
+    b0.set_cylinder_head (
+        Subaru30h6_engine_head(
+            intake_camshaft: camshaft.intake_cam_0,
+            exhaust_camshaft: camshaft.exhaust_cam_0,
+            flip_display: true
+        )
+    )
+    b1.set_cylinder_head (
+        Subaru30h6_engine_head(
+            intake_camshaft: camshaft.intake_cam_1,
+            exhaust_camshaft: camshaft.exhaust_cam_1,
+            flip_display: false
+        )
+    )
+
+    function timing_curve(1000 * units.rpm)
+       timing_curve
+        .add_sample(0000 * units.rpm, 19 * units.deg)
+        .add_sample(1000 * units.rpm, 20 * units.deg)
+        .add_sample(2000 * units.rpm, 22 * units.deg)
+        .add_sample(3000 * units.rpm, 28 * units.deg)
+        .add_sample(4000 * units.rpm, 34 * units.deg)
+        .add_sample(5000 * units.rpm, 40 * units.deg)
+        .add_sample(6000 * units.rpm, 47 * units.deg)
+        .add_sample(7000 * units.rpm, 53 * units.deg)
+        .add_sample(8000 * units.rpm, 59 * units.deg)
+
+    engine.add_ignition_module(
+        Subaru30h6_distributor(
+            wires: wires,
+            timing_curve: timing_curve,
+            rev_limit: 8000 * units.rpm
+        ))
+}

@@ -1,0 +1,29 @@
+//////// Engine Simulator by AngeTheGreat forked by TheReywob ////////
+
+import "engine_sim.mr"
+
+// Import all engines.
+import "engines/audi/i5.mr"                     //audi_i5_2_2L
+import "engines/bmw/M52B28.mr"                  //M52B28
+import "engines/bmw/s54.mr"                     //S54
+import "engines/chevrolet/chev_truck_454.mr"    //chev_truck_454
+import "engines/ferrari/F136_FB.mr"             //F136_FB
+import "engines/fiat/punto_hgt.mr"              //hgt
+import "engines/kohler/kohler_ch750.mr"         //kohler_ch750
+import "engines/lamborghini/Lamborghini_5_2.mr" //lamborghini_5_2
+import "engines/no_name/crossplane_i4.mr"       //crossplane_i4
+import "engines/no_name/single.mr"              //single
+import "engines/porsche/m64.mr"                 //m64
+import "engines/subaru/boxer.mr"                //ej22
+import "engines/subaru/Subaru30h6.mr"           //Subaru30h6
+import "engines/toyota/2jz_ge.mr"               //jz
+import "engines/toyota/v10.mr"                  //toyota_1lr_gue
+import "engines/volkswagon/bug.mr"              //bug
+import "engines/generic_v6.mr"                  //v6
+
+// Choose the engine you want to simulating using the "node name" below.
+// Example: "jz()" will load the Toyota 2JZ GE.
+
+set_engine(
+    engine: chev_truck_454()
+)
